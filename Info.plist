@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+    <key>CFBundleExecutable</key><string>KnockKnock</string>
+    <key>CFBundleIdentifier</key><string>app.knockknock.mac</string>
+    <key>CFBundleName</key><string>knock-knock</string>
+    <key>CFBundleDisplayName</key><string>knock-knock</string>
+    <key>CFBundlePackageType</key><string>APPL</string>
+    <key>CFBundleShortVersionString</key><string>1.0.0</string>
+    <key>CFBundleVersion</key><string>1</string>
+    <key>CFBundleDevelopmentRegion</key><string>en</string>
+    <key>CFBundleLocalizations</key><array><string>en</string><string>zh-Hans</string><string>ja</string></array>
+    <key>CFBundleIconFile</key><string>AppIcon</string>
+    <key>LSMinimumSystemVersion</key><string>14.0</string>
+    <key>LSUIElement</key><true/>
+    <key>NSHighResolutionCapable</key><true/>
+    <key>NSCalendarsFullAccessUsageDescription</key><string>knock-knock reads your calendar events to show a large reminder before meetings and scheduled events. Your calendar data stays on this Mac. knock-knock does not create, edit, or delete events.</string>
+    <key>NSCalendarsUsageDescription</key><string>knock-knock reads your calendar events to remind you before they start.</string>
+    <key>NSPrincipalClass</key><string>NSApplication</string>
+    <key>NSHumanReadableCopyright</key><string>Copyright 2026 knock-knock contributors.</string>
+</dict></plist>
