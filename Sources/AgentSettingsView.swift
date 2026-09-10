@@ -11,7 +11,9 @@ struct AgentSettingsView: View {
                         Image(systemName: "terminal").font(.system(size: 22)).foregroundStyle(source == .codex ? KnockUI.accent : .pink).frame(width: 36)
                         VStack(alignment: .leading, spacing: 6) {
                             Text(source.title).font(.system(size: 15, weight: .semibold))
-                            Text(agents.installed.contains(source) ? L("Hook configured") : L("Not connected")).font(.system(size: 12)).foregroundStyle(.secondary)
+                            Text(agents.installed.contains(source)
+                                 ? (agents.receivedSources.contains(source) ? L("Events received") : L("Configured; awaiting first event"))
+                                 : L("Not connected")).font(.system(size: 12)).foregroundStyle(.secondary)
                         }
                         Spacer()
                         Button { agents.onPreview?(source) } label: { Image(systemName: "play.fill") }
@@ -21,6 +23,18 @@ struct AgentSettingsView: View {
                         }.buttonStyle(KnockButtonStyle())
                     }.frame(minHeight: 80)
                     Divider()
+                    if source == .codex && agents.installed.contains(.codex) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Label(L("Codex hook trust"), systemImage: "checkmark.shield")
+                                .font(.system(size: 13, weight: .semibold))
+                            Text(L("In Codex, enter /hooks and trust only the knock-notify Stop hook. Then reopen your task."))
+                                .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                            Button(action: agents.reviewCodexHook) {
+                                Label(L("Review in Terminal"), systemImage: "terminal")
+                            }.buttonStyle(KnockButtonStyle())
+                        }.padding(.vertical, 16)
+                        Divider()
+                    }
                 }
                 SectionTitle(title: L("Notifications")).padding(.top, 28).padding(.bottom, 12)
                 preferenceToggle(L("Agent reminders"), symbol: "bell.badge", binding: $agents.enabled)

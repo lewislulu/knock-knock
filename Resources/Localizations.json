@@ -110,5 +110,11 @@
   "%d minutes": {"zh-Hans": "%d 分钟", "ja": "%d 分"},
   "Pause reminders": {"zh-Hans": "暂停提醒", "ja": "リマインダーを停止"},
   "Open Login Items Settings": {"zh-Hans": "打开登录项设置", "ja": "ログイン項目の設定を開く"},
-  "CALENDARS": {"zh-Hans": "日历", "ja": "カレンダー"}
+  "CALENDARS": {"zh-Hans": "日历", "ja": "カレンダー"},
+  "Configured; awaiting first event": {"zh-Hans": "已配置，等待首次事件", "ja": "設定済み・初回イベント待ち"},
+  "Events received": {"zh-Hans": "已收到事件", "ja": "イベント受信済み"},
+  "Codex hook trust": {"zh-Hans": "Codex Hook 信任确认", "ja": "Codex フックの信頼確認"},
+  "In Codex, enter /hooks and trust only the knock-notify Stop hook. Then reopen your task.": {"zh-Hans": "在 Codex 中输入 /hooks，仅信任 knock-notify 的 Stop Hook，然后重新打开任务。", "ja": "Codex で /hooks を入力し、knock-notify の Stop フックのみを信頼してください。その後、タスクを開き直してください。"},
+  "Review in Terminal": {"zh-Hans": "在终端中审核", "ja": "ターミナルで確認"},
+  "Could not open hook review in Terminal.": {"zh-Hans": "无法在终端中打开 Hook 审核。", "ja": "ターミナルでフックの確認を開けませんでした。"}
 }

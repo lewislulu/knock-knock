@@ -62,6 +62,12 @@ struct RenderPreviews {
             monitor.calendars = [CalendarChoice(id: "one", title: "Demo calendar", source: "Demo account", color: .systemTeal),
                                  CalendarChoice(id: "two", title: "Demo projects", source: "Demo account", color: .systemPink)]
             for width in [900.0, 1020.0] {
+                let pendingAgents = AgentIntegration()
+                pendingAgents.installed = [.codex]
+                state.page = .agents
+                try save(MainView(monitor: monitor, state: state, design: design, agents: pendingAgents, preview: {}, testSound: {})
+                    .frame(width: width, height: 790),
+                    to: output.appendingPathComponent("app-agents-pending-\(language.rawValue)-\(Int(width)).png"))
                 for page in AppPage.allCases {
                     state.page = page
                     let root = MainView(monitor: monitor, state: state, design: design, preview: {}, testSound: {})

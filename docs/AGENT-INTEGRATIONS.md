@@ -24,7 +24,7 @@ This feature is being developed on `feature/agent-completion-reminders`. It is n
 
 1. 构建本分支，把 `knock-knock.app` 放到固定位置，推荐「应用程序」。运行后打开 **AI 任务**。
 2. 点击 Codex 或 Claude Code 旁边的 **连接**。应用会合并自己的 Stop handler，不覆盖其他 hooks，并在原配置目录保留权限为 `0600` 的备份。
-3. Codex 必须在 `/hooks` 中查看并信任这个新 hook；桌面端使用其提供的 hook 信任入口，或者在共享同一 `CODEX_HOME` 的 CLI 中完成。配置变化后重新打开任务或重启客户端。应用显示“Hook 已配置”只表示文件已写好，不表示已经通过信任检查。
+3. Codex 必须在 `/hooks` 中查看并信任这个新 hook。点击 **在终端中审核** 会打开 Codex CLI（优先使用桌面应用自带版本），然后输入 `/hooks`，找到命令包含 `knock-notify --source codex` 的 Stop Hook 并确认信任。仅审核本应用的 Hook。配置变化后重新打开任务或重启客户端。“已配置，等待首次事件”表示文件已写好，尚未验证事件接收，并不表示通过了信任检查。
 4. 让智能体完成一轮回复。收到事件后，AI 任务页会显示最近接收时间；旁边的播放按钮可单独预览样式，不运行模型。
 
 应用必须能够在本机启动。无需授予日历权限也可以接收 AI 提醒。全局“暂停提醒”会暂存待通知事件，解锁或恢复后继续显示；超过一小时的积压会丢弃。关闭“AI 任务提醒”会丢弃后续事件和待显示队列。
@@ -50,7 +50,9 @@ Codex 的会话跳转要求这条会话存在于接收深链的桌面客户端�
 
 The bridge listens for the main agent's **Stop** event, meaning a reply is ready. It does not assert that the entire project is finished. Other Stop hooks can still ask the agent to continue. Progress messages, tool calls, interrupts, and subagent completion are ignored.
 
-Install this branch's app in a stable location, open **AI Tasks**, and connect Codex or Claude Code. Existing settings and hooks are preserved, with a private backup beside the original configuration. **Codex hooks require review and trust in `/hooks`** before they run. Restart the client or reopen the task after configuration changes. “Hook configured” means the handler exists, not that trust or delivery has been verified. The last-event time confirms receipt.
+Install this branch's app in a stable location, open **AI Tasks**, and connect Codex or Claude Code. Existing settings and hooks are preserved, with a private backup beside the original configuration. **Codex hooks require review and trust in `/hooks`** before they run. Click **Review in Terminal**, enter `/hooks`, and review and trust only the Stop hook whose command runs `knock-notify --source codex`. This opens the desktop app's bundled CLI when available, using the same configuration directory as the connection. Restart the client or reopen the task after configuration changes. “Configured; awaiting first event” means the handler exists, not that trust or delivery has been verified. “Events received” and the last-event time confirm receipt during the current app run; they are not a continuous connection health check.
+
+If a reply completes without a reminder, first check hook trust: Codex skips new hooks with status `untrusted`. A preview only tests the reminder window, not the Codex connection. The app never grants hook trust automatically. The review launcher is stored in the private `Setup` directory beside `AgentInbox`; it contains setup instructions and executable/configuration paths, with no session content.
 
 Codex desktop support requires a version that executes local lifecycle hooks. The current installed desktop code exposes `codex://threads/<id>`; that deep-link format is a compatibility detail, not a guaranteed public API. It can only find sessions available to that desktop client. The CLI alternative runs `codex resume <id>`. Claude Code runs `claude --resume <id>` in a new Terminal window. This does not focus the original terminal tab. Both CLIs must be available on the login shell's PATH.
 

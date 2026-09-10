@@ -82,6 +82,7 @@ import AppKit
         try AgentInbox.write(event, root: inbox)
         integration.poll()
         precondition(received.isEmpty)
+        precondition(integration.receivedSources == [.codex])
         canDeliver = true
         integration.poll()
         precondition(received.count == 1)

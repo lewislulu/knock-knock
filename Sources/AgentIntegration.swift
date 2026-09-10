@@ -74,6 +74,7 @@ enum AgentHooks {
     @Published var showSummaries: Bool { didSet { defaults.set(showSummaries, forKey: "agentSummaries"); onPreferencesChanged?() } }
     @Published var installed: Set<AgentSource> = []
     @Published var lastReceived: Date?
+    @Published var receivedSources: Set<AgentSource> = []
     @Published var error: String?
     var onEvents: (([AgentEvent]) -> Void)?
     var onPreview: ((AgentSource) -> Void)?
@@ -109,13 +110,36 @@ enum AgentHooks {
         guard let helper else { error = L("Integration helper is missing."); return }
         do {
             try AgentHooks.set(source, helper: helper, at: AgentHooks.configURL(source), install: !installed.contains(source))
+            receivedSources.remove(source)
             refreshConnections(); error = nil
         } catch { self.error = L("Could not update agent hooks. Check the configuration file and its permissions.") }
+    }
+    func reviewCodexHook() {
+        do {
+            let root = AgentInbox.root.deletingLastPathComponent().appendingPathComponent("Setup", isDirectory: true)
+            try AgentInbox.prepare(root)
+            let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.openai.codex")
+            let bundled = app?.appendingPathComponent("Contents/Resources/codex")
+            let executable = bundled.flatMap { FileManager.default.isExecutableFile(atPath: $0.path) ? $0.path : nil } ?? "codex"
+            let instruction = L("In Codex, enter /hooks and trust only the knock-notify Stop hook. Then reopen your task.")
+            let script = "#!/bin/zsh -l\ncd -- " + AgentEvent.shellQuote(FileManager.default.homeDirectoryForCurrentUser.path)
+                + "\nexport CODEX_HOME=" + AgentEvent.shellQuote(AgentHooks.configURL(.codex).deletingLastPathComponent().path)
+                + "\nprintf '%s\\n' " + AgentEvent.shellQuote(instruction)
+                + "\nexec " + AgentEvent.shellQuote(executable) + " --no-alt-screen\n"
+            let url = root.appendingPathComponent("review-codex-hook.command")
+            try Data(script.utf8).write(to: url, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: url.path)
+            guard let terminal = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.Terminal") else { throw AgentError.missingHelper }
+            NSWorkspace.shared.open([url], withApplicationAt: terminal, configuration: NSWorkspace.OpenConfiguration()) { [weak self] _, error in
+                if error != nil { Task { @MainActor in self?.error = L("Could not open hook review in Terminal.") } }
+            }
+        } catch { self.error = L("Could not open hook review in Terminal.") }
     }
     func poll() {
         do {
             let incoming = try AgentInbox.take(root: inbox)
             if !incoming.isEmpty { lastReceived = Date() }
+            receivedSources.formUnion(incoming.map(\.source))
             delivered = delivered.filter { Date().timeIntervalSince($0.value) < 86400 }
             for event in incoming where delivered[event.id] == nil {
                 delivered[event.id] = Date()
