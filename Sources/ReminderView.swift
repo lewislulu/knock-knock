@@ -7,8 +7,12 @@ struct ReminderView: View {
     @ObservedObject var design: DesignPreferences
     let dismiss: () -> Void
     let snooze: () -> Void
+    var showAgentSummary: Bool = false
+    var openAgent: ((AgentEvent) -> Bool)? = nil
+    var resumeAgent: ((AgentEvent) -> Bool)? = nil
+    @State private var actionFailed = false
     private var theme: ReminderTheme { design.theme }
-    private var title: String { isPreview ? L("Your next meeting") : meeting.title }
+    private var title: String { isPreview && meeting.agent == nil ? L("Your next meeting") : meeting.title }
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { timeline in
@@ -35,6 +39,7 @@ struct ReminderView: View {
     }
 
     private func countdown(_ now: Date) -> String {
+        if meeting.agent != nil { return L("REPLY READY") }
         let seconds = meeting.start.timeIntervalSince(now)
         if seconds <= 0 { return L("STARTING NOW") }
         if seconds <= 60 { return L("STARTING IN LESS THAN A MINUTE") }
@@ -50,14 +55,19 @@ struct ReminderView: View {
 
     private var eventTime: some View {
         HStack(spacing: 8) {
-            Text(Localization.time(meeting.start) + " – " + Localization.time(meeting.end)).monospacedDigit().fixedSize()
+            Text(meeting.agent == nil ? Localization.time(meeting.start) + " – " + Localization.time(meeting.end) : Localization.time(meeting.start)).monospacedDigit().fixedSize()
             Circle().fill(Color(nsColor: meeting.color)).frame(width: 5, height: 5)
-            Text(isPreview ? L("Preview") : meeting.calendar).lineLimit(1).truncationMode(.middle)
+            Text(meeting.agent.map { $0.project.isEmpty ? $0.source.title : $0.project } ?? (isPreview ? L("Preview") : meeting.calendar)).lineLimit(1).truncationMode(.middle)
+            if let agent = meeting.agent { Text(String(agent.sessionID.prefix(8))).font(.system(size: 10, design: .monospaced)).lineLimit(1) }
         }.font(.system(size: 12)).foregroundStyle(.secondary)
     }
 
     private var location: some View {
         Group {
+            if let agent = meeting.agent, showAgentSummary, !agent.summary.isEmpty {
+                Text(agent.summary).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(2)
+            }
+            if actionFailed { Text(L("Could not open the session.")).font(.system(size: 11)).foregroundStyle(.red) }
             if !meeting.location.isEmpty && !meeting.location.hasPrefix("http") {
                 Label(meeting.location, systemImage: "mappin").font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).help(meeting.location)
             }
@@ -66,21 +76,41 @@ struct ReminderView: View {
 
     private var primaryAction: some View {
         Button {
+            if let agent = meeting.agent {
+                if openAgent?(agent) == true { dismiss() } else { actionFailed = true }
+                return
+            }
             if let url = meeting.joinURL { NSWorkspace.shared.open(url) }
             dismiss()
         } label: {
-            Label(L(meeting.joinURL != nil ? "Join meeting" : (theme == .classic ? "Dismiss" : "I'm coming!")),
-                  systemImage: meeting.joinURL == nil ? "checkmark" : "video.fill")
-        }.buttonStyle(KnockButtonStyle(primary: true, tint: theme.accent))
+            if let agent = meeting.agent {
+                Label(L(agent.source == .codex ? "Open in Codex" : "Resume in Terminal"), systemImage: agent.source == .codex ? "arrow.up.right.square" : "terminal")
+            } else {
+                Label(L(meeting.joinURL != nil ? "Join meeting" : (theme == .classic ? "Dismiss" : "I'm coming!")),
+                      systemImage: meeting.joinURL == nil ? "checkmark" : "video.fill")
+            }
+        }.buttonStyle(KnockButtonStyle(primary: true, tint: theme.accent)).disabled(isPreview && meeting.agent != nil)
     }
 
     private func actions(now: Date) -> some View {
         HStack(spacing: 10) {
             primaryAction
-            Button(action: snooze) { Label(L("Snooze 1 min"), systemImage: "clock.arrow.circlepath") }
+            if let agent = meeting.agent {
+                if agent.source == .codex {
+                    Button { if resumeAgent?(agent) == true { dismiss() } else { actionFailed = true } } label: { Image(systemName: "terminal") }
+                        .buttonStyle(KnockIconStyle()).help(L("Resume in Terminal")).disabled(isPreview)
+                }
+                Button {
+                    NSPasteboard.general.clearContents(); NSPasteboard.general.setString(agent.resumeCommand, forType: .string)
+                } label: { Image(systemName: "doc.on.doc") }.buttonStyle(KnockIconStyle()).help(L("Copy resume command")).disabled(isPreview)
+            } else {
+                Button(action: snooze) { Label(L("Snooze 1 min"), systemImage: "clock.arrow.circlepath") }
                 .buttonStyle(KnockButtonStyle()).disabled(ReminderPolicy.snoozeDate(start: meeting.start, now: now) == nil)
+            }
             Spacer(minLength: 0)
-            Button(action: openCalendar) { Image(systemName: "calendar") }.buttonStyle(KnockIconStyle()).help(L("Open Calendar")).accessibilityLabel(L("Open Calendar"))
+            if meeting.agent == nil {
+                Button(action: openCalendar) { Image(systemName: "calendar") }.buttonStyle(KnockIconStyle()).help(L("Open Calendar")).accessibilityLabel(L("Open Calendar"))
+            }
         }
     }
 
@@ -110,7 +140,7 @@ struct ReminderView: View {
             VStack(alignment: .leading, spacing: 10) {
                 header
                 HStack(alignment: .center, spacing: 12) {
-                    Text(L("MEOW. IT'S TIME.")).font(.system(size: 12, weight: .bold, design: .monospaced)).foregroundStyle(theme.accent)
+                    Text(meeting.agent == nil ? L("MEOW. IT'S TIME.") : L("MEOW. ALL DONE.")).font(.system(size: 12, weight: .bold, design: .monospaced)).foregroundStyle(theme.accent)
                     Spacer(minLength: 0)
                     timing(now)
                 }.padding(.top, 4)
@@ -141,14 +171,23 @@ struct ReminderView: View {
                 }
                 Text(title).font(.system(size: 22, weight: .semibold)).lineLimit(2).minimumScaleFactor(0.75).help(title)
                 eventTime
+                if let agent = meeting.agent, showAgentSummary, !agent.summary.isEmpty {
+                    Text(agent.summary).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+                }
+                if actionFailed { Text(L("Could not open the session.")).font(.system(size: 11)).foregroundStyle(.red) }
             }.frame(maxWidth: .infinity, alignment: .leading)
             VStack(alignment: .trailing, spacing: 12) {
                 Button(action: dismiss) { Image(systemName: "xmark") }.buttonStyle(KnockIconStyle()).help(L("Dismiss reminder")).accessibilityLabel(L("Dismiss reminder"))
                 HStack(spacing: 8) {
                     primaryAction
+                    if let agent = meeting.agent {
+                        Button { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(agent.resumeCommand, forType: .string) }
+                            label: { Image(systemName: "doc.on.doc") }.buttonStyle(KnockIconStyle()).help(L("Copy resume command")).disabled(isPreview)
+                    } else {
                     Button(action: snooze) { Image(systemName: "clock.arrow.circlepath") }.buttonStyle(KnockIconStyle())
                         .help(L("Snooze 1 min")).accessibilityLabel(L("Snooze 1 min"))
                         .disabled(ReminderPolicy.snoozeDate(start: meeting.start, now: now) == nil)
+                    }
                 }
             }
         }.padding(24).frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -167,7 +206,7 @@ struct ReminderView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(L(theme == .girl ? "KNOCK KNOCK!" : "FBI! OPEN UP!"))
                         .font(.system(size: 18, weight: .bold, design: .monospaced)).foregroundStyle(theme.accent)
-                    Text(theme.greeting).font(.system(size: 11)).foregroundStyle(.secondary)
+                    Text(meeting.agent == nil ? theme.greeting : L("Your agent is at the door.")).font(.system(size: 11)).foregroundStyle(.secondary)
                     timing(now).padding(.top, 2)
                     Text(title).font(.system(size: 26, weight: .semibold, design: .rounded)).lineLimit(3).minimumScaleFactor(0.75).help(title)
                         .frame(maxWidth: .infinity, alignment: .leading)

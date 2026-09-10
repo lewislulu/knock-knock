@@ -15,6 +15,12 @@ swift "$PROJECT_DIR/scripts/icon.swift" "$PROJECT_DIR/.build"
 cp "$PROJECT_DIR/.build/AppIcon.iconset/icon_256x256.png" "$APP_DIR/Contents/Resources/BrandMark.png"
 iconutil -c icns "$PROJECT_DIR/.build/AppIcon.iconset" -o "$APP_DIR/Contents/Resources/AppIcon.icns"
 strip -S "$APP_DIR/Contents/MacOS/KnockKnock"
+swiftc -O -swift-version 5 -target arm64-apple-macosx14.0 \
+  -file-prefix-map "$PROJECT_DIR=knock-knock" -debug-prefix-map "$PROJECT_DIR=knock-knock" \
+  "$PROJECT_DIR/Sources/AgentEvent.swift" "$PROJECT_DIR/Tools/KnockNotify.swift" \
+  -o "$APP_DIR/Contents/Resources/knock-notify"
+strip -S "$APP_DIR/Contents/Resources/knock-notify"
+codesign --force --sign - "$APP_DIR/Contents/Resources/knock-notify"
 codesign --force --sign - --identifier app.knockknock.mac "$APP_DIR"
 codesign --verify --deep --strict "$APP_DIR"
 printf 'Built %s\n' "$APP_DIR"

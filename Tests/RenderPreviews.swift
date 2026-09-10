@@ -39,6 +39,20 @@ struct RenderPreviews {
                     precondition((bitmap.colorAt(x: 1, y: 1)?.alphaComponent ?? 1) == 0, "Cat overlay must be transparent outside the art")
                 }
                 print("Rendered \(theme.rawValue) / \(language.rawValue)")
+                for source in AgentSource.allCases {
+                    let event = AgentEvent.demo(source)
+                    let agentMeeting = Meeting(id: "agent-demo", title: L("%@ reply is ready", source.title),
+                        start: event.createdAt, end: event.createdAt, calendar: source.title, color: .systemTeal,
+                        location: "", joinURL: nil, agent: event)
+                    let agentRoot = ReminderView(meeting: agentMeeting, count: 2, isPreview: false, design: design,
+                        dismiss: {}, snooze: {}, openAgent: { _ in true }, resumeAgent: { _ in true })
+                        .frame(width: size.width, height: size.height)
+                    let agentRenderer = ImageRenderer(content: agentRoot)
+                    agentRenderer.scale = 1
+                    guard let agentImage = agentRenderer.nsImage, let agentData = agentImage.tiffRepresentation,
+                          let agentBitmap = NSBitmapImageRep(data: agentData), let agentPNG = agentBitmap.representation(using: .png, properties: [:]) else { fatalError("Agent render failed") }
+                    try agentPNG.write(to: output.appendingPathComponent("agent-\(source.rawValue)-\(theme.rawValue)-\(language.rawValue).png"))
+                }
             }
             design.theme = .girl
             monitor.authorization = .fullAccess

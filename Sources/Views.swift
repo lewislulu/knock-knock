@@ -2,9 +2,9 @@ import SwiftUI
 import ServiceManagement
 
 enum AppPage: String, CaseIterable {
-    case upcoming = "Upcoming", playground = "Playground", settings = "Settings"
+    case upcoming = "Upcoming", playground = "Playground", agents = "AI Tasks", settings = "Settings"
     var symbol: String {
-        switch self { case .upcoming: return "calendar"; case .playground: return "sparkles"; case .settings: return "slider.horizontal.3" }
+        switch self { case .upcoming: return "calendar"; case .playground: return "sparkles"; case .agents: return "terminal"; case .settings: return "slider.horizontal.3" }
     }
 }
 @MainActor final class WindowState: ObservableObject { @Published var page: AppPage = .playground }
@@ -13,6 +13,7 @@ struct MainView: View {
     @ObservedObject var monitor: CalendarMonitor
     @ObservedObject var state: WindowState
     @ObservedObject var design: DesignPreferences
+    @ObservedObject var agents = AgentIntegration()
     let preview: () -> Void
     let testSound: () -> Void
     var body: some View {
@@ -56,17 +57,18 @@ struct MainView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(L(state.page.rawValue)).font(.system(size: 23, weight: .semibold))
-                        Text(state.page == .upcoming ? Localization.day(Date(), wide: true) : (state.page == .playground ? design.theme.title : L("Reminder preferences")))
+                        Text(state.page == .upcoming ? Localization.day(Date(), wide: true) : (state.page == .playground ? design.theme.title : (state.page == .agents ? L("Agent connections") : L("Reminder preferences"))))
                             .font(.system(size: 13)).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Button(action: preview) { Label(L("Preview notice"), systemImage: "play.fill") }
+                    Button { if state.page == .agents { agents.onPreview?(.codex) } else { preview() } } label: { Label(L("Preview notice"), systemImage: "play.fill") }
                         .buttonStyle(KnockButtonStyle(primary: true)).help(L("Preview a meeting reminder"))
                 }.padding(.horizontal, KnockUI.inset).frame(height: 88)
                 Divider()
                 switch state.page {
                 case .playground: PlaygroundView(monitor: monitor, design: design, preview: preview, testSound: testSound)
                 case .settings: SettingsView(monitor: monitor, design: design)
+                case .agents: AgentSettingsView(agents: agents)
                 case .upcoming: if !monitor.hasAccess { connectionView } else { agendaView }
                 }
                 if let error = monitor.error {

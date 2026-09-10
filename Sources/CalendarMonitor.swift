@@ -19,6 +19,7 @@ struct Meeting: Identifiable, Equatable {
     let color: NSColor
     let location: String
     let joinURL: URL?
+    var agent: AgentEvent? = nil
     var candidate: ReminderCandidate { .init(id: id, start: start, end: end) }
 
     static var preview: Meeting {
@@ -58,6 +59,7 @@ final class CalendarMonitor: ObservableObject {
     private var screenLocked = false
     var hasAccess: Bool { authorization == .fullAccess }
     var canPresentReminder: Bool { hasAccess && !screenLocked }
+    var canPresentAgentReminder: Bool { !paused && !screenLocked }
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults

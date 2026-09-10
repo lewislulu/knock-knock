@@ -2,6 +2,8 @@
 
 ## English
 
+The feature branch adds opt-in agent hook connections. Hooks pass session metadata through a private local queue; optional reply excerpts are disabled by default. Project paths and session IDs are used for reopening sessions. See the [integration data handling details](docs/AGENT-INTEGRATIONS.md), including queue retention, configuration backups, and generated resume scripts. No prompts or transcripts are collected by the bridge.
+
 knock-knock reads calendars through macOS EventKit after you grant access. Apple's full-access permission is required to read events on supported macOS versions; the app does not create, edit, or delete events.
 
 Event titles, dates, locations, calendar names, and detected meeting links are processed in memory to display upcoming events and reminders. Event notes may be inspected in memory to find a meeting link. Local preferences store settings, excluded calendar identifiers, and event identifiers with delivery or snooze timestamps. Delivery history is pruned after seven days during refresh. The app does not keep its own database of event titles or notes.
@@ -21,6 +23,8 @@ Reminders intentionally display event information on screen. Consider other peop
 Please do not include private calendar data, access tokens, or unredacted desktop screenshots in public issues or pull requests.
 
 ## 简体中文
+
+功能分支新增可选的 AI Hook 连接。会话元数据通过私有本地队列传递，回复摘录默认关闭，项目路径和会话 ID 用于恢复会话。队列保留、配置备份及恢复脚本说明见 [AI 接入指南](docs/AGENT-INTEGRATIONS.md)。接入程序不会收集提示词或聊天记录。
 
 knock-knock 在获得授权后，通过 macOS EventKit 读取日历。在支持的 macOS 版本上，读取日程需要系统的完整访问权限；应用不会创建、修改或删除日程。
 

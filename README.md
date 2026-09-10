@@ -40,6 +40,8 @@ Keep the app running for reminders. It cannot wake a sleeping Mac or show a noti
 
 ## Build from source
 
+The `feature/agent-completion-reminders` branch also adds local Codex and Claude Code reply reminders. See the [AI integration guide](docs/AGENT-INTEGRATIONS.md) for setup, hook trust, session navigation, and privacy. This feature is not in the v1.0.0 download.
+
 On an Apple Silicon Mac with macOS 14+, install Apple's Command Line Tools (`xcode-select --install`). You need `swiftc`, the macOS SDK, and Python 3; there are no package dependencies.
 
 ```sh

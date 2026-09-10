@@ -10,3 +10,9 @@ python3 "$PROJECT_DIR/Tests/test_resources.py"
 swiftc "$PROJECT_DIR/Sources/DesignPreferences.swift" "$PROJECT_DIR/Sources/PixelArt.swift" \
   "$PROJECT_DIR/Tests/NativeResourceTests.swift" -o "$PROJECT_DIR/.build/NativeResourceTests" -framework AppKit -framework SwiftUI
 "$PROJECT_DIR/.build/NativeResourceTests" "$PROJECT_DIR/knock-knock.app"
+swiftc -D INTEGRATION_TESTING "$PROJECT_DIR/Sources/AgentEvent.swift" "$PROJECT_DIR/Tools/KnockNotify.swift" \
+  -o "$PROJECT_DIR/.build/knock-notify-test" -framework AppKit
+swiftc "$PROJECT_DIR/Sources/AgentEvent.swift" "$PROJECT_DIR/Sources/AgentIntegration.swift" \
+  "$PROJECT_DIR/Sources/DesignPreferences.swift" "$PROJECT_DIR/Tests/AgentIntegrationTests.swift" \
+  -o "$PROJECT_DIR/.build/AgentIntegrationTests" -framework AppKit -framework SwiftUI
+"$PROJECT_DIR/.build/AgentIntegrationTests" "$PROJECT_DIR/.build/knock-notify-test"

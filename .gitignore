@@ -17,3 +17,6 @@ __pycache__/
 *.dSYM/
 .idea/
 .vscode/
+.codex/
+.claude/
+*.bak

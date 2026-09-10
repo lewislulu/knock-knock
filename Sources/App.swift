@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let monitor = CalendarMonitor()
     private let windowState = WindowState()
     private let design = DesignPreferences()
+    private let agents = AgentIntegration()
     private let soundPlayer = ReminderSoundPlayer()
     private var nudgeTimer: Timer?
     private var nudgeCount = 0
@@ -37,9 +38,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if !self.queue.isEmpty { self.renderReminder(reposition: true) }
         }
         monitor.start()
+        agents.canDeliver = { [weak self] in self?.monitor.canPresentAgentReminder == true }
+        agents.onEvents = { [weak self] events in
+            guard let self else { return }
+            self.present(events.map { event in
+                Meeting(id: "agent:" + event.id, title: L("%@ reply is ready", event.source.title),
+                        start: event.createdAt, end: event.createdAt.addingTimeInterval(3600),
+                        calendar: event.source.title, color: .systemTeal, location: "", joinURL: nil, agent: event)
+            })
+        }
+        agents.start()
+        agents.onPreferencesChanged = { [weak self] in
+            guard let self else { return }
+            if !self.agents.enabled { self.queue.removeAll { $0.agent != nil } }
+            self.renderReminder()
+        }
+        agents.onPreview = { [weak self] source in
+            guard let self, self.queue.isEmpty || self.previewActive else { return }
+            self.previewActive = true
+            let event = AgentEvent.demo(source)
+            self.queue = [Meeting(id: "agent-preview", title: L("%@ reply is ready", source.title), start: event.createdAt,
+                end: event.createdAt, calendar: source.title, color: .systemTeal, location: "", joinURL: nil, agent: event)]
+            self.renderReminder(); self.playSound()
+        }
         updateMenu()
         let loginLaunch = NSAppleEventManager.shared().currentAppleEvent?
             .paramDescriptor(forKeyword: keyAEPropData)?.enumCodeValue == keyAELaunchedAsLogInItem
+        if CommandLine.arguments.contains("--agents") { windowState.page = .agents }
         if !loginLaunch && !CommandLine.arguments.contains("--background") { showMain() }
         if CommandLine.arguments.contains("--preview") { showPreview() }
     }
@@ -77,6 +102,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(.separator())
         addMenuItem(menu, "Upcoming", #selector(showUpcoming))
         addMenuItem(menu, "Playground", #selector(showPlayground))
+        addMenuItem(menu, "AI Tasks", #selector(showAgents))
         addMenuItem(menu, "Preview Notice", #selector(showPreview))
         addMenuItem(menu, monitor.paused ? "Resume Reminders" : "Pause Reminders", #selector(togglePause))
         addMenuItem(menu, "Settings...", #selector(showSettings), key: ",")
@@ -100,7 +126,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.titlebarAppearsTransparent = true
             window.isReleasedWhenClosed = false
             window.minSize = NSSize(width: 900, height: 650)
-            window.contentView = NSHostingView(rootView: MainView(monitor: monitor, state: windowState, design: design,
+            window.contentView = NSHostingView(rootView: MainView(monitor: monitor, state: windowState, design: design, agents: agents,
                 preview: { [weak self] in self?.showPreview() }, testSound: { [weak self] in self?.playSound() }))
             window.center()
             mainWindow = window
@@ -112,6 +138,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func showSettings() { windowState.page = .settings; showMain() }
     @objc private func showPlayground() { windowState.page = .playground; showMain() }
+    @objc private func showAgents() { windowState.page = .agents; agents.refreshConnections(); showMain() }
     @objc private func showUpcoming() { windowState.page = .upcoming; showMain() }
     @objc private func togglePause() { monitor.paused.toggle(); updateMenu() }
 
@@ -137,7 +164,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func reconcileReminders() {
         guard !previewActive, !queue.isEmpty else { return }
         let current = Dictionary(uniqueKeysWithValues: monitor.meetings.map { ($0.id, $0) })
-        let updated = queue.compactMap { current[$0.id] }
+        let updated = queue.compactMap { $0.agent == nil ? current[$0.id] : $0 }
         if queue != updated { queue = updated; renderReminder() }
     }
 
@@ -162,7 +189,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let panel = reminderPanel else { return }
         panel.contentView = NSHostingView(rootView: ReminderView(meeting: meeting, count: queue.count,
             isPreview: previewActive, design: design, dismiss: { [weak self] in self?.advanceReminder(snoozing: false) },
-            snooze: { [weak self] in self?.advanceReminder(snoozing: true) }).ignoresSafeArea())
+            snooze: { [weak self] in self?.advanceReminder(snoozing: true) },
+            showAgentSummary: agents.showSummaries,
+            openAgent: { [weak self] in self?.agents.openSession($0) ?? false },
+            resumeAgent: { [weak self] in self?.agents.openTerminal($0) ?? false }).ignoresSafeArea())
         let screen = NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) } ?? NSScreen.main
         let bounds = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1200, height: 800)
         let size = design.theme.panelSize
@@ -178,7 +208,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func advanceReminder(snoozing: Bool) {
         guard let meeting = queue.first else { return }
-        if snoozing && !previewActive { monitor.snooze(meeting) }
+        if snoozing && !previewActive && meeting.agent == nil { monitor.snooze(meeting) }
         queue.removeFirst()
         previewActive = false
         renderReminder()
@@ -196,7 +226,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         nudgeTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 guard let self, !self.queue.isEmpty else { return }
-                guard self.design.repeatNudge, !self.monitor.paused, self.monitor.canPresentReminder else { return }
+                let allowed = self.queue.first?.agent == nil ? self.monitor.canPresentReminder : self.monitor.canPresentAgentReminder
+                guard self.design.repeatNudge, !self.monitor.paused, allowed else { return }
                 guard self.nudgeCount < 3 else { self.nudgeTimer?.invalidate(); return }
                 self.nudgeCount += 1
                 self.playSound()

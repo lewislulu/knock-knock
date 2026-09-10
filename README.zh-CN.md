@@ -38,6 +38,8 @@ FBI 风格仅为虚构的视觉玩笑，与任何机构无关。
 
 ## 从源码构建
 
+`feature/agent-completion-reminders` 分支新增本地 Codex、Claude Code 回复完成提醒。接入方式、Hook 信任、会话跳转及隐私说明见 [AI 接入指南](docs/AGENT-INTEGRATIONS.md)。此功能尚未包含在 v1.0.0 下载中。
+
 在运行 macOS 14 或更新版本的 Apple Silicon Mac 上，安装 Apple 命令行工具（`xcode-select --install`）。需要 `swiftc`、macOS SDK 和 Python 3，无第三方包依赖。
 
 ```sh

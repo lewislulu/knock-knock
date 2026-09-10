@@ -40,6 +40,9 @@ if __name__ == "__main__":
     target.mkdir(parents=True, exist_ok=True)
     preview = ROOT / ".build/previews"
     images = {
+        "app-AI Tasks-zh-Hans-1020.png": "agents-zh-CN.png",
+        "agent-codex-cat-zh-Hans.png": "agent-codex-zh-CN.png",
+        "agent-claude-girl-en.png": "agent-claude-en.png",
         "app-Playground-en-1020.png": "playground-en.png",
         "app-Playground-zh-Hans-1020.png": "playground-zh-CN.png",
         "cat-en.png": "cat-en.png",
